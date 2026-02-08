@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const connectDB = require('./config/db');
 
 // Route dosyaları
@@ -20,6 +21,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Statik dosyaları sun (Frontend - EN BAŞTA OLMALI)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Route'ları bağla
 app.use('/api/auth', authRoutes);
@@ -101,11 +105,6 @@ app.use((err, req, res, next) => {
         error: 'SERVER_ERROR'
     });
 });
-
-const path = require('path');
-
-// Statik dosyaları sun (Frontend - Production)
-app.use(express.static(path.join(__dirname, 'public')));
 
 // 404 handler - API için
 app.use('/api/*', (req, res) => {

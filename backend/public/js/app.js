@@ -35,7 +35,7 @@ const app = {
         }
 
         // Navigate to dashboard
-        router.navigate('dashboard');
+        window.location.hash = 'dashboard';
     },
 
     setupEventListeners() {

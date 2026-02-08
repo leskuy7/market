@@ -25,13 +25,15 @@ app.use(express.urlencoded({ extended: true }));
 // Statik dosyaları sun (Frontend - EN BAŞTA OLMALI)
 app.use(express.static(path.join(__dirname, 'public')));
 
+const { protect, authorize } = require('./middleware/auth');
+
 // Route'ları bağla
 app.use('/api/auth', authRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/stock', stockRoutes);
-app.use('/api/sales', saleRoutes);
-app.use('/api/reports', reportRoutes);
+app.use('/api/categories', protect, categoryRoutes);
+app.use('/api/products', protect, productRoutes);
+app.use('/api/stock', protect, stockRoutes);
+app.use('/api/sales', protect, saleRoutes);
+app.use('/api/reports', protect, reportRoutes);
 
 // Ana sayfa (API Bilgisi)
 app.get('/api', (req, res) => {

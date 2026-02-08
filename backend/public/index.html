@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="description" content="Market ve Mağaza Stok Takip Uygulaması">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <title>Market Stok Takip</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="assets/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/components.css">
+</head>
+
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-logo">🏪</div>
+            <div class="loading-spinner"></div>
+            <p>Yükleniyor...</p>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen login-screen hidden">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="login-logo">🏪</div>
+                <h1>Market Stok Takip</h1>
+                <p>Hesabınıza giriş yapın</p>
+            </div>
+
+            <form id="login-form" class="login-form">
+                <div class="form-group">
+                    <label for="login-username">Kullanıcı Adı / E-posta</label>
+                    <input type="text" id="login-username" required autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="login-password">Şifre</label>
+                    <input type="password" id="login-password" required autocomplete="current-password">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">
+                    Giriş Yap
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <p>Hesabınız yok mu? <a href="#" id="show-register">Kayıt Olun</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Screen -->
+    <div id="register-screen" class="screen register-screen hidden">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="login-logo">🏪</div>
+                <h1>Kayıt Ol</h1>
+                <p>Yeni hesap oluşturun</p>
+            </div>
+
+            <form id="register-form" class="login-form">
+                <div class="form-group">
+                    <label for="register-name">Ad Soyad</label>
+                    <input type="text" id="register-name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="register-username">Kullanıcı Adı</label>
+                    <input type="text" id="register-username" required autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="register-email">E-posta</label>
+                    <input type="email" id="register-email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="register-password">Şifre</label>
+                    <input type="password" id="register-password" required minlength="6" autocomplete="new-password">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">
+                    Kayıt Ol
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <p>Zaten hesabınız var mı? <a href="#" id="show-login">Giriş Yapın</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="app hidden">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button id="menu-toggle" class="menu-toggle">☰</button>
+                <h1 id="page-title">Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <button id="scan-btn" class="icon-btn" title="Barkod Tara">📷</button>
+                <button id="notifications-btn" class="icon-btn" title="Bildirimler">🔔</button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="user-info">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-details">
+                        <span id="user-name">Kullanıcı</span>
+                        <span id="user-role" class="user-role">Personel</span>
+                    </div>
+                </div>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item active" data-page="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Dashboard</span>
+                </li>
+                <li class="nav-item" data-page="products">
+                    <span class="nav-icon">📦</span>
+                    <span class="nav-text">Ürünler</span>
+                </li>
+                <li class="nav-item" data-page="sales">
+                    <span class="nav-icon">🛒</span>
+                    <span class="nav-text">Satış</span>
+                </li>
+                <li class="nav-item" data-page="stock">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">Stok Takip</span>
+                </li>
+                <li class="nav-item" data-page="reports">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-text">Raporlar</span>
+                </li>
+                <li class="nav-item" data-page="categories">
+                    <span class="nav-icon">🏷️</span>
+                    <span class="nav-text">Kategoriler</span>
+                </li>
+                <li class="nav-item" data-page="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-text">Ayarlar</span>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="btn btn-outline btn-full">
+                    🚪 Çıkış Yap
+                </button>
+            </div>
+        </nav>
+
+        <!-- Sidebar Overlay -->
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="main-content">
+            <!-- Pages will be loaded here -->
+        </main>
+
+        <!-- Bottom Navigation (Mobile) -->
+        <nav class="bottom-nav">
+            <button class="bottom-nav-item active" data-page="dashboard">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Ana Sayfa</span>
+            </button>
+            <button class="bottom-nav-item" data-page="products">
+                <span class="nav-icon">📦</span>
+                <span class="nav-label">Ürünler</span>
+            </button>
+            <button class="bottom-nav-item" data-page="sales">
+                <span class="nav-icon">🛒</span>
+                <span class="nav-label">Satış</span>
+            </button>
+            <button class="bottom-nav-item" data-page="stock">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Stok</span>
+            </button>
+            <button class="bottom-nav-item" data-page="reports">
+                <span class="nav-icon">📈</span>
+                <span class="nav-label">Rapor</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Barcode Scanner Modal -->
+    <div id="scanner-modal" class="modal hidden">
+        <div class="modal-content scanner-content">
+            <div class="modal-header">
+                <h2>Barkod Tara</h2>
+                <button class="modal-close" id="close-scanner">✕</button>
+            </div>
+            <div class="scanner-container">
+                <video id="scanner-video" autoplay playsinline></video>
+                <div class="scanner-overlay">
+                    <div class="scanner-frame"></div>
+                </div>
+            </div>
+            <div class="scanner-result hidden">
+                <p id="scanned-barcode"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="product-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="product-modal-title">Yeni Ürün</h2>
+                <button class="modal-close" id="close-product-modal">✕</button>
+            </div>
+            <form id="product-form" class="modal-form">
+                <input type="hidden" id="product-id">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="product-barcode">Barkod *</label>
+                        <div class="input-with-btn">
+                            <input type="text" id="product-barcode" required>
+                            <button type="button" id="scan-barcode-btn" class="btn btn-icon">📷</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-name">Ürün Adı *</label>
+                        <input type="text" id="product-name" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="product-category">Kategori</label>
+                        <select id="product-category">
+                            <option value="">Seçiniz</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-unit">Birim</label>
+                        <select id="product-unit">
+                            <option value="adet">Adet</option>
+                            <option value="kg">Kilogram</option>
+                            <option value="lt">Litre</option>
+                            <option value="paket">Paket</option>
+                            <option value="kutu">Kutu</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="product-purchase-price">Alış Fiyatı *</label>
+                        <input type="number" id="product-purchase-price" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-sale-price">Satış Fiyatı *</label>
+                        <input type="number" id="product-sale-price" step="0.01" min="0" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="product-stock">Stok *</label>
+                        <input type="number" id="product-stock" min="0" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-min-stock">Min. Stok</label>
+                        <input type="number" id="product-min-stock" min="0" value="5">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="product-supplier">Tedarikçi</label>
+                    <input type="text" id="product-supplier">
+                </div>
+
+                <div class="form-group">
+                    <label for="product-description">Açıklama</label>
+                    <textarea id="product-description" rows="2"></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" id="cancel-product">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/barcode.js"></script>
+    <script src="js/router.js"></script>
+    <script src="pages/dashboard.js"></script>
+    <script src="pages/products.js"></script>
+    <script src="pages/sales.js"></script>
+    <script src="pages/stock.js"></script>
+    <script src="pages/reports.js"></script>
+    <script src="pages/categories.js"></script>
+    <script src="pages/settings.js"></script>
+    <script src="pages/errors.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+
+</html>

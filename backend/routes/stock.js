@@ -3,10 +3,11 @@ const router = express.Router();
 const Product = require('../models/Product');
 const StockMovement = require('../models/StockMovement');
 const { protect } = require('../middleware/auth');
+const { validate, stockMovementSchema } = require('../middleware/validators');
 
 // @desc    Stok hareketi ekle
 // @route   POST /api/stock/movement
-router.post('/movement', protect, async (req, res) => {
+router.post('/movement', protect, validate(stockMovementSchema), async (req, res) => {
     try {
         const { productId, type, quantity, reason, note } = req.body;
 
@@ -33,7 +34,10 @@ router.post('/movement', protect, async (req, res) => {
             }
             newStock = previousStock - quantity;
         } else {
-            newStock = quantity; // adjustment
+            return res.status(400).json({
+                success: false,
+                message: 'Geçersiz hareket tipi'
+            });
         }
 
         const movement = await StockMovement.create({

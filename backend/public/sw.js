@@ -1,9 +1,10 @@
-const CACHE_NAME = 'market-stock-v2';
+const CACHE_NAME = 'market-stock-v3';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
     '/css/styles.css',
     '/css/components.css',
+    '/assets/icons/icon-192.svg',
     '/js/app.js',
     '/js/api.js',
     '/js/auth.js',
@@ -68,6 +69,21 @@ self.addEventListener('fetch', event => {
                 .catch(() => {
                     return caches.match(request);
                 })
+        );
+        return;
+    }
+
+    if (request.mode === 'navigate') {
+        event.respondWith(
+            fetch(request)
+                .then(response => {
+                    const responseClone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put('/index.html', responseClone);
+                    });
+                    return response;
+                })
+                .catch(() => caches.match('/index.html'))
         );
         return;
     }

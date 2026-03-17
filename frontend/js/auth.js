@@ -30,9 +30,11 @@ const auth = {
         try {
             const response = await api.auth.register(data);
             if (response.success) {
-                storage.set('token', response.token);
-                storage.set('user', response.user);
-                this.user = response.user;
+                if (response.token) {
+                    storage.set('token', response.token);
+                    storage.set('user', response.user);
+                    this.user = response.user;
+                }
                 return { success: true, user: response.user };
             }
             return { success: false, message: response.message };

@@ -6,14 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#6366f1">
     <meta name="description" content="Market ve Mağaza Stok Takip Uygulaması">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <title>Market Stok Takip</title>
 
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="assets/icons/icon-192.png">
-    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+    <link rel="icon" href="assets/icons/icon-192.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.svg">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -47,15 +48,21 @@
                 <p>Hesabınıza giriş yapın</p>
             </div>
 
-            <form id="login-form" class="login-form">
+            <form id="login-form" class="login-form" novalidate>
                 <div class="form-group">
                     <label for="login-email">E-posta</label>
                     <input type="email" id="login-email" required autocomplete="email">
+                    <small class="field-hint">Geçerli bir e-posta adresi girin.</small>
                 </div>
 
                 <div class="form-group">
                     <label for="login-password">Şifre</label>
-                    <input type="password" id="login-password" required autocomplete="current-password">
+                    <div class="input-with-btn">
+                        <input type="password" id="login-password" required autocomplete="current-password">
+                        <button type="button" class="btn btn-ghost password-toggle" data-target="login-password" aria-label="Şifreyi göster">
+                            Göster
+                        </button>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-full">
@@ -78,15 +85,32 @@
                 <p>Yeni hesap oluşturun</p>
             </div>
 
-            <form id="register-form" class="login-form">
+            <form id="register-form" class="login-form" novalidate>
                 <div class="form-group">
                     <label for="register-email">E-posta</label>
                     <input type="email" id="register-email" required autocomplete="email">
+                    <small class="field-hint">Hesabınız için kullanılacak e-posta adresi.</small>
                 </div>
 
                 <div class="form-group">
                     <label for="register-password">Şifre</label>
-                    <input type="password" id="register-password" required minlength="6" autocomplete="new-password">
+                    <div class="input-with-btn">
+                        <input type="password" id="register-password" required minlength="8" autocomplete="new-password">
+                        <button type="button" class="btn btn-ghost password-toggle" data-target="register-password" aria-label="Şifreyi göster">
+                            Göster
+                        </button>
+                    </div>
+                    <small class="field-hint">En az 8 karakter, 1 harf ve 1 rakam içermeli.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="register-password-confirm">Şifre Tekrar</label>
+                    <div class="input-with-btn">
+                        <input type="password" id="register-password-confirm" required minlength="8" autocomplete="new-password">
+                        <button type="button" class="btn btn-ghost password-toggle" data-target="register-password-confirm" aria-label="Şifreyi göster">
+                            Göster
+                        </button>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-full">
@@ -319,7 +343,10 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Service Worker registered'))
+                    .then(reg => {
+                        reg.update();
+                        console.log('Service Worker registered');
+                    })
                     .catch(err => console.log('Service Worker registration failed:', err));
             });
         }

@@ -55,6 +55,15 @@ router.post('/', protect, validate(saleSchema), async (req, res) => {
             });
         }
 
+        if (discount > subtotal) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({
+                success: false,
+                message: 'İndirim tutarı ara toplamdan büyük olamaz'
+            });
+        }
+
         const total = subtotal - discount;
 
         // Satışı kaydet (transaction içinde)

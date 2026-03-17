@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, 'E-posta gereklidir'],
         unique: true,
+        trim: true,
+        lowercase: true,
         match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Geçerli bir e-posta giriniz']
     },
     password: {
@@ -17,6 +19,7 @@ const userSchema = new mongoose.Schema({
     },
     name: {
         type: String,
+        trim: true,
         default: ''
     },
     role: {
@@ -37,9 +40,9 @@ const userSchema = new mongoose.Schema({
 });
 
 // Şifreyi hashle
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
     if (!this.isModified('password')) {
-        next();
+        return;
     }
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);

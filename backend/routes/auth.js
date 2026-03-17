@@ -3,21 +3,58 @@ const router = express.Router();
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_MIN_LENGTH = 8;
+
+function normalizeEmail(email) {
+    return String(email || '').trim().toLowerCase();
+}
+
+function validateRegisterInput(email, password) {
+    if (!email || !password) {
+        return 'E-posta ve şifre gereklidir';
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+        return 'Geçerli bir e-posta adresi giriniz';
+    }
+
+    if (password.length < PASSWORD_MIN_LENGTH) {
+        return `Şifre en az ${PASSWORD_MIN_LENGTH} karakter olmalıdır`;
+    }
+
+    if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+        return 'Şifre en az 1 harf ve 1 rakam içermelidir';
+    }
+
+    return null;
+}
+
+function validateLoginInput(email, password) {
+    if (!email || !password) {
+        return 'E-posta ve şifre gereklidir';
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+        return 'Geçerli bir e-posta adresi giriniz';
+    }
+
+    return null;
+}
+
 // @desc    Kayıt ol (sadece e-posta ile)
 // @route   POST /api/auth/register
 router.post('/register', async (req, res) => {
     try {
-        const { email, password, name, role } = req.body;
+        const email = normalizeEmail(req.body.email);
+        const password = String(req.body.password || '');
+        const name = String(req.body.name || '').trim();
 
-        // Validasyonlar
-        if (!email || !password) {
+        const validationMessage = validateRegisterInput(email, password);
+        if (validationMessage) {
             return res.status(400).json({
                 success: false,
-                message: 'E-posta ve şifre gereklidir',
-                errors: {
-                    email: !email ? 'E-posta gerekli' : null,
-                    password: !password ? 'Şifre gerekli' : null
-                }
+                message: validationMessage
             });
         }
 
@@ -33,7 +70,7 @@ router.post('/register', async (req, res) => {
 
         // İlk kullanıcı otomatik admin olsun
         const userCount = await User.countDocuments();
-        const userRole = userCount === 0 ? 'admin' : (role || 'staff');
+        const userRole = userCount === 0 ? 'admin' : 'staff';
 
         const user = await User.create({
             email,
@@ -74,12 +111,14 @@ router.post('/register', async (req, res) => {
 // @route   POST /api/auth/login
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const email = normalizeEmail(req.body.email);
+        const password = String(req.body.password || '');
 
-        if (!email || !password) {
+        const validationMessage = validateLoginInput(email, password);
+        if (validationMessage) {
             return res.status(400).json({
                 success: false,
-                message: 'E-posta ve şifre gereklidir'
+                message: validationMessage
             });
         }
 

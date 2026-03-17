@@ -15,7 +15,7 @@ const saleSchema = z.object({
 const productSchema = z.object({
     barcode: z.string().min(1, 'Barkod gereklidir'),
     name: z.string().min(1, 'Ürün adı gereklidir').max(200),
-    category: z.string().optional(),
+    category: z.string().nullable().optional(),
     purchasePrice: z.number().min(0, 'Alış fiyatı negatif olamaz'),
     salePrice: z.number().min(0, 'Satış fiyatı negatif olamaz'),
     stock: z.number().int().min(0, 'Stok negatif olamaz').default(0),
@@ -34,7 +34,7 @@ const categorySchema = z.object({
 });
 
 const stockMovementSchema = z.object({
-    product: z.string().min(1, 'Ürün ID gereklidir'),
+    productId: z.string().min(1, 'Ürün ID gereklidir'),
     type: z.enum(['in', 'out'], { message: 'Geçersiz hareket tipi' }),
     quantity: z.number().int().positive('Miktar 0\'dan büyük olmalıdır'),
     reason: z.string().min(1, 'Sebep gereklidir'),

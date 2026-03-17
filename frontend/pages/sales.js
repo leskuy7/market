@@ -1,6 +1,53 @@
 // Sales Page (POS)
 let cart = [];
 
+// ─── USB Barcode Scanner Buffer System ───
+// Barcode guns type at 10-20ms intervals and send Enter at the end.
+// Human typing is much slower (>50ms between keys).
+const scannerBuffer = {
+    buffer: '',
+    lastKeyTime: 0,
+    MAX_KEY_INTERVAL: 50, // ms — gap threshold between scanner vs human typing
+
+    handleKeyDown(e) {
+        const now = Date.now();
+        const target = e.target;
+
+        // Don't intercept if user is typing in a text input (except barcode-input)
+        if (target.tagName === 'INPUT' && target.id !== 'barcode-input') return;
+        if (target.tagName === 'TEXTAREA') return;
+        if (target.tagName === 'SELECT') return;
+
+        // If too much time passed, reset buffer (human typing)
+        if (now - this.lastKeyTime > this.MAX_KEY_INTERVAL && this.buffer.length > 0) {
+            this.buffer = '';
+        }
+        this.lastKeyTime = now;
+
+        if (e.key === 'Enter') {
+            if (this.buffer.length >= 4) { // Minimum barcode length
+                e.preventDefault();
+                const barcode = this.buffer;
+                this.buffer = '';
+
+                // If on sales page, add to cart
+                const barcodeInput = document.getElementById('barcode-input');
+                if (barcodeInput) {
+                    barcodeInput.value = '';
+                    addToCart(barcode);
+                }
+            }
+            this.buffer = '';
+        } else if (e.key.length === 1) {
+            // Single character key (not Shift, Ctrl, etc.)
+            this.buffer += e.key;
+        }
+    }
+};
+
+// Global listener for barcode scanner
+document.addEventListener('keydown', (e) => scannerBuffer.handleKeyDown(e));
+
 router.register('sales', async (container) => {
     cart = [];
     container.innerHTML = `
@@ -59,30 +106,16 @@ router.register('sales', async (container) => {
     `;
 
     const barcodeInput = document.getElementById('barcode-input');
-    let barcodeTimeout;
 
-    const processBarcode = async () => {
-        const barcode = barcodeInput.value.trim();
-        if (barcode) {
-            await addToCart(barcode);
-            barcodeInput.value = '';
-            barcodeInput.focus();
-        }
-    };
-
-    barcodeInput.addEventListener('input', (e) => {
-        if (barcodeTimeout) clearTimeout(barcodeTimeout);
-
-        // Hızlı yazma/okuma bittikten 400ms sonra işlem yap
-        if (e.target.value.trim().length > 0) {
-            barcodeTimeout = setTimeout(processBarcode, 400);
-        }
-    });
-
+    // Manual typing: user types barcode and presses Enter
     barcodeInput.addEventListener('keypress', async (e) => {
         if (e.key === 'Enter') {
-            if (barcodeTimeout) clearTimeout(barcodeTimeout);
-            await processBarcode();
+            const barcode = barcodeInput.value.trim();
+            if (barcode) {
+                await addToCart(barcode);
+                barcodeInput.value = '';
+                barcodeInput.focus();
+            }
         }
     });
 
@@ -93,29 +126,49 @@ router.register('sales', async (container) => {
 
 async function addToCart(barcode) {
     try {
-        const res = await api.products.getByBarcode(barcode);
-        if (res.success) {
-            const product = res.data;
+        let product = null;
+
+        // Try IndexedDB first (0 latency, works offline)
+        if (typeof offlineDB !== 'undefined') {
+            product = await offlineDB.getProductByBarcode(barcode);
+        }
+
+        // Fallback to server if not found locally
+        if (!product) {
+            const res = await api.products.getByBarcode(barcode);
+            if (res.success) {
+                product = res.data;
+            }
+        }
+
+        if (product) {
             const existing = cart.find(i => i.product._id === product._id);
             if (existing) {
                 if (existing.quantity < product.stock) {
                     existing.quantity++;
                 } else {
                     showToast('Yetersiz stok', 'warning');
+                    if (typeof sfx !== 'undefined') sfx.error();
                     return;
                 }
             } else {
                 if (product.stock < 1) {
                     showToast('Stokta yok', 'error');
+                    if (typeof sfx !== 'undefined') sfx.error();
                     return;
                 }
                 cart.push({ product, quantity: 1 });
             }
             renderCart();
             showToast(`${product.name} eklendi`, 'success');
+            if (typeof sfx !== 'undefined') sfx.beep();
+        } else {
+            showToast('Ürün bulunamadı', 'error');
+            if (typeof sfx !== 'undefined') sfx.error();
         }
     } catch (e) {
         showToast('Ürün bulunamadı', 'error');
+        if (typeof sfx !== 'undefined') sfx.error();
     }
 }
 
@@ -155,6 +208,7 @@ function updateQuantity(index, change) {
         renderCart();
     } else {
         showToast('Yetersiz stok', 'warning');
+        if (typeof sfx !== 'undefined') sfx.error();
     }
 }
 
@@ -188,11 +242,28 @@ async function completeSale() {
         const res = await api.sales.create(data);
         if (res.success) {
             showToast(`Satış tamamlandı! ${res.data.saleNumber}`, 'success');
+            if (typeof sfx !== 'undefined') sfx.success();
             cart = [];
             renderCart();
             document.getElementById('cart-discount').value = 0;
         }
     } catch (e) {
-        showToast(e.message, 'error');
+        // Offline fallback: queue sale locally
+        if (!navigator.onLine && typeof offlineDB !== 'undefined') {
+            const queued = await offlineDB.queueSale(data);
+            if (queued) {
+                showToast('Çevrimdışı: Satış kaydedildi, internet gelince gönderilecek', 'warning', 5000);
+                if (typeof sfx !== 'undefined') sfx.success();
+                cart = [];
+                renderCart();
+                document.getElementById('cart-discount').value = 0;
+            } else {
+                showToast('Satış kaydedilemedi!', 'error');
+                if (typeof sfx !== 'undefined') sfx.error();
+            }
+        } else {
+            showToast(e.message, 'error');
+            if (typeof sfx !== 'undefined') sfx.error();
+        }
     }
 }

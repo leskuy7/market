@@ -3,33 +3,21 @@ const router = express.Router();
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 
-// @desc    Kayıt ol
+// @desc    Kayıt ol (sadece e-posta ile)
 // @route   POST /api/auth/register
 router.post('/register', async (req, res) => {
     try {
-        const { username, email, password, name, role } = req.body;
+        const { email, password, name, role } = req.body;
 
         // Validasyonlar
-        if (!username || !email || !password || !name) {
+        if (!email || !password) {
             return res.status(400).json({
                 success: false,
-                message: 'Tüm alanları doldurunuz',
+                message: 'E-posta ve şifre gereklidir',
                 errors: {
-                    username: !username ? 'Kullanıcı adı gerekli' : null,
                     email: !email ? 'E-posta gerekli' : null,
-                    password: !password ? 'Şifre gerekli' : null,
-                    name: !name ? 'Ad soyad gerekli' : null
+                    password: !password ? 'Şifre gerekli' : null
                 }
-            });
-        }
-
-        // Kullanıcı adı kontrolü
-        const existingUsername = await User.findOne({ username });
-        if (existingUsername) {
-            return res.status(400).json({
-                success: false,
-                message: 'Bu kullanıcı adı zaten kullanılıyor',
-                field: 'username'
             });
         }
 
@@ -48,10 +36,9 @@ router.post('/register', async (req, res) => {
         const userRole = userCount === 0 ? 'admin' : (role || 'staff');
 
         const user = await User.create({
-            username,
             email,
             password,
-            name,
+            name: name || email.split('@')[0],
             role: userRole
         });
 
@@ -60,7 +47,6 @@ router.post('/register', async (req, res) => {
             success: true,
             message: 'Kayıt başarılı! Giriş yapabilirsiniz.',
             user: {
-                username: user.username,
                 email: user.email,
                 name: user.name,
                 role: user.role
@@ -84,22 +70,20 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// @desc    Giriş yap
+// @desc    Giriş yap (e-posta ile)
 // @route   POST /api/auth/login
 router.post('/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { email, password } = req.body;
 
-        if (!username || !password) {
+        if (!email || !password) {
             return res.status(400).json({
                 success: false,
-                message: 'Kullanıcı adı ve şifre gereklidir'
+                message: 'E-posta ve şifre gereklidir'
             });
         }
 
-        const user = await User.findOne({
-            $or: [{ username }, { email: username }]
-        }).select('+password');
+        const user = await User.findOne({ email }).select('+password');
 
         if (!user) {
             return res.status(401).json({
@@ -135,7 +119,6 @@ router.post('/login', async (req, res) => {
             token,
             user: {
                 id: user._id,
-                username: user.username,
                 email: user.email,
                 name: user.name,
                 role: user.role
@@ -156,7 +139,6 @@ router.get('/me', protect, async (req, res) => {
         success: true,
         user: {
             id: req.user._id,
-            username: req.user.username,
             email: req.user.email,
             name: req.user.name,
             role: req.user.role

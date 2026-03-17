@@ -226,3 +226,53 @@ function validateForm(formData, rules) {
         errors
     };
 }
+
+// ─── Sound Effects (AudioContext — no external files needed) ───
+const sfx = (() => {
+    let audioCtx = null;
+
+    function getCtx() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        return audioCtx;
+    }
+
+    function playTone(frequency, duration, type = 'sine') {
+        try {
+            const ctx = getCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + duration);
+        } catch (_) { /* AudioContext not supported */ }
+    }
+
+    return {
+        /** Short high-pitch beep — barcode scanned successfully */
+        beep() {
+            playTone(1200, 0.15);
+        },
+
+        /** Two low-pitch buzzes — error (out of stock, not found) */
+        error() {
+            playTone(400, 0.15, 'square');
+            setTimeout(() => playTone(300, 0.2, 'square'), 180);
+        },
+
+        /** Two ascending tones — sale completed */
+        success() {
+            playTone(800, 0.12);
+            setTimeout(() => playTone(1200, 0.2), 150);
+        }
+    };
+})();

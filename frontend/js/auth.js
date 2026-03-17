@@ -11,9 +11,9 @@ const auth = {
         return this.user || storage.get('user');
     },
 
-    async login(username, password) {
+    async login(email, password) {
         try {
-            const response = await api.auth.login(username, password);
+            const response = await api.auth.login(email, password);
             if (response.success) {
                 storage.set('token', response.token);
                 storage.set('user', response.user);

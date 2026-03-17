@@ -30,7 +30,7 @@ const app = {
         // Update user info
         const user = auth.getUser();
         if (user) {
-            document.getElementById('user-name').textContent = user.name;
+            document.getElementById('user-name').textContent = user.name || user.email;
             document.getElementById('user-role').textContent = user.role === 'admin' ? 'Yönetici' : 'Personel';
         }
 
@@ -80,7 +80,7 @@ const app = {
             btn.textContent = 'Giriş yapılıyor...';
 
             const result = await auth.login(
-                document.getElementById('login-username').value,
+                document.getElementById('login-email').value,
                 document.getElementById('login-password').value
             );
 
@@ -102,8 +102,6 @@ const app = {
             btn.textContent = 'Kayıt olunuyor...';
 
             const result = await auth.register({
-                name: document.getElementById('register-name').value,
-                username: document.getElementById('register-username').value,
                 email: document.getElementById('register-email').value,
                 password: document.getElementById('register-password').value
             });

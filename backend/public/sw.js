@@ -1,4 +1,4 @@
-const CACHE_NAME = 'market-stock-v1';
+const CACHE_NAME = 'market-stock-v2';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -8,6 +8,7 @@ const STATIC_ASSETS = [
     '/js/api.js',
     '/js/auth.js',
     '/js/barcode.js',
+    '/js/db.js',
     '/js/router.js',
     '/js/utils.js',
     '/pages/dashboard.js',
@@ -98,7 +99,7 @@ self.addEventListener('fetch', event => {
     );
 });
 
-// Background sync for offline sales
+// ─── Background Sync for offline sales ───
 self.addEventListener('sync', event => {
     if (event.tag === 'sync-sales') {
         event.waitUntil(syncOfflineSales());
@@ -106,6 +107,78 @@ self.addEventListener('sync', event => {
 });
 
 async function syncOfflineSales() {
-    // This would sync offline sales when connection is restored
-    console.log('Syncing offline sales...');
+    // Open IndexedDB inside the service worker
+    const db = await openIndexedDB();
+    if (!db) return;
+
+    const tx = db.transaction('pending_sales', 'readonly');
+    const store = tx.objectStore('pending_sales');
+
+    const allSales = await idbGetAll(store);
+    if (allSales.length === 0) return;
+
+    console.log(`[SW] ${allSales.length} bekleyen satış senkronize ediliyor...`);
+
+    for (const sale of allSales) {
+        try {
+            const { offlineId, queuedAt, ...saleData } = sale;
+
+            // Get token from the client if possible
+            const clients = await self.clients.matchAll();
+            let token = '';
+            if (clients.length > 0) {
+                // Ask a client for the auth token
+                // Fallback: try localStorage via cache
+            }
+
+            const response = await fetch('/api/sales', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(saleData)
+            });
+
+            if (response.ok) {
+                // Remove from pending
+                const delTx = db.transaction('pending_sales', 'readwrite');
+                delTx.objectStore('pending_sales').delete(offlineId);
+                console.log(`[SW] Satış senkronize edildi`);
+            }
+        } catch (err) {
+            console.warn('[SW] Satış senkronize edilemedi:', err.message);
+            break;
+        }
+    }
+
+    db.close();
+}
+
+// ─── IndexedDB helpers for Service Worker ───
+function openIndexedDB() {
+    return new Promise((resolve) => {
+        try {
+            const request = indexedDB.open('market-offline', 1);
+            request.onsuccess = (e) => resolve(e.target.result);
+            request.onerror = () => resolve(null);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('products')) {
+                    const s = db.createObjectStore('products', { keyPath: '_id' });
+                    s.createIndex('barcode', 'barcode', { unique: true });
+                }
+                if (!db.objectStoreNames.contains('pending_sales')) {
+                    db.createObjectStore('pending_sales', { keyPath: 'offlineId', autoIncrement: true });
+                }
+            };
+        } catch {
+            resolve(null);
+        }
+    });
+}
+
+function idbGetAll(store) {
+    return new Promise((resolve) => {
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => resolve([]);
+    });
 }

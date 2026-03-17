@@ -1,40 +1,81 @@
-// Barcode Scanner Module
+// Barcode Scanner Module — html5-qrcode powered
 const barcodeScanner = {
-    video: null,
-    stream: null,
+    html5Qr: null,
     scanning: false,
     onScan: null,
 
     async start(onScan) {
         this.onScan = onScan;
-        this.video = document.getElementById('scanner-video');
 
         try {
-            this.stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment' }
-            });
-            this.video.srcObject = this.stream;
+            // Clean up any previous instance
+            if (this.html5Qr) {
+                try { await this.html5Qr.stop(); } catch (_) { /* ignore */ }
+                this.html5Qr.clear();
+                this.html5Qr = null;
+            }
+
+            this.html5Qr = new Html5Qrcode('qr-reader');
             this.scanning = true;
-            this.scan();
+
+            const config = {
+                fps: 15,
+                qrbox: { width: 280, height: 150 },
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39
+                ]
+            };
+
+            await this.html5Qr.start(
+                { facingMode: 'environment' },
+                config,
+                (decodedText) => {
+                    // Barcode successfully decoded
+                    if (typeof sfx !== 'undefined') sfx.beep();
+
+                    const resultArea = document.getElementById('scanner-result-area');
+                    const barcodeLabel = document.getElementById('scanned-barcode');
+                    if (resultArea && barcodeLabel) {
+                        barcodeLabel.textContent = decodedText;
+                        resultArea.style.display = 'block';
+                    }
+
+                    // Trigger callback
+                    if (this.onScan) this.onScan(decodedText);
+
+                    // Auto-stop after reading
+                    setTimeout(() => this.stop(), 500);
+                },
+                (_errorMessage) => {
+                    // Scan frame — no barcode found yet (this is normal, not an error)
+                }
+            );
+
             return true;
         } catch (error) {
-            showToast('Kamera erişimi sağlanamadı', 'error');
+            console.error('Kamera başlatılamadı:', error);
+            showToast('Kamera erişimi sağlanamadı. Lütfen kamera izni verin.', 'error');
             return false;
         }
     },
 
-    stop() {
+    async stop() {
         this.scanning = false;
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-            this.stream = null;
+        if (this.html5Qr) {
+            try {
+                await this.html5Qr.stop();
+            } catch (_) { /* already stopped */ }
+            try {
+                this.html5Qr.clear();
+            } catch (_) { /* ignore */ }
+            this.html5Qr = null;
         }
-    },
-
-    scan() {
-        if (!this.scanning) return;
-        // Polling for barcode (simplified - would use QuaggaJS in production)
-        requestAnimationFrame(() => this.scan());
     },
 
     // Manual barcode input
@@ -57,15 +98,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (scanBtn) {
         scanBtn.addEventListener('click', () => {
             scannerModal.classList.remove('hidden');
-            barcodeScanner.start((barcode) => {
-                document.getElementById('scanned-barcode').textContent = barcode;
+            const resultArea = document.getElementById('scanner-result-area');
+            if (resultArea) resultArea.style.display = 'none';
+
+            barcodeScanner.start(async (barcode) => {
+                // If on sales page, add to cart directly
+                if (typeof addToCart === 'function') {
+                    await addToCart(barcode);
+                }
+                // Close modal after a short delay
+                setTimeout(() => {
+                    scannerModal.classList.add('hidden');
+                }, 800);
             });
         });
     }
 
     if (closeScanner) {
-        closeScanner.addEventListener('click', () => {
-            barcodeScanner.stop();
+        closeScanner.addEventListener('click', async () => {
+            await barcodeScanner.stop();
             scannerModal.classList.add('hidden');
         });
     }

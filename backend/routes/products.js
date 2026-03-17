@@ -3,6 +3,7 @@ const router = express.Router();
 const Product = require('../models/Product');
 const StockMovement = require('../models/StockMovement');
 const { protect } = require('../middleware/auth');
+const { validate, productSchema, productUpdateSchema } = require('../middleware/validators');
 
 // @desc    Tüm ürünleri getir
 // @route   GET /api/products
@@ -106,7 +107,7 @@ router.get('/:id', async (req, res) => {
 
 // @desc    Ürün ekle
 // @route   POST /api/products
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, validate(productSchema), async (req, res) => {
     try {
         const product = await Product.create(req.body);
 
@@ -138,7 +139,7 @@ router.post('/', protect, async (req, res) => {
 
 // @desc    Ürün güncelle
 // @route   PUT /api/products/:id
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', protect, validate(productUpdateSchema), async (req, res) => {
     try {
         // Stok değişikliği ayrı işlenecek
         const { stock, ...updateData } = req.body;

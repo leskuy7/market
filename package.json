@@ -1,0 +1,12 @@
+{
+  "name": "market",
+  "private": true,
+  "description": "Market Stok Takip - Railway deploy",
+  "scripts": {
+    "start": "cd backend && node server.js",
+    "postinstall": "cd backend && npm install"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

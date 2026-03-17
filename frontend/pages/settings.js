@@ -11,7 +11,7 @@ router.register('settings', async (container) => {
                 <div class="list-item">
                     <div class="list-item-icon">👤</div>
                     <div class="list-item-content">
-                        <div class="list-item-title">${user?.name || 'Kullanıcı'}</div>
+                        <div class="list-item-title">${user?.name || user?.email || 'Kullanıcı'}</div>
                         <div class="list-item-subtitle">${user?.email || ''}</div>
                     </div>
                     <span class="badge ${user?.role === 'admin' ? 'badge-primary' : 'badge-success'}">

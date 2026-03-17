@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 
 // Route dosyaları
@@ -17,13 +19,48 @@ connectDB();
 
 const app = express();
 
+// ─── Security Middleware ───
+app.use(helmet({
+    contentSecurityPolicy: false // SPA uyumluluğu için kapalı
+}));
+
+// Genel API Rate Limit (100 istek/dakika)
+const generalLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+    message: {
+        success: false,
+        message: 'Çok fazla istek gönderdiniz. Lütfen bir süre bekleyin.',
+        error: 'RATE_LIMIT'
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+// Kimlik doğrulama Rate Limit (10 istek/dakika)
+const authLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    message: {
+        success: false,
+        message: 'Çok fazla giriş denemesi. Lütfen bir dakika bekleyin.',
+        error: 'AUTH_RATE_LIMIT'
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Statik dosyaları sun (Frontend - EN BAŞTA OLMALI)
 app.use(express.static(path.join(__dirname, 'public')));
+
+// API rate limit uygula
+app.use('/api/', generalLimiter);
+app.use('/api/auth', authLimiter);
 
 const { protect, authorize } = require('./middleware/auth');
 

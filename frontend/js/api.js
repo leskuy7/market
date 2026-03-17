@@ -1,6 +1,10 @@
 // API Module
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = (window.APP_CONFIG && window.APP_CONFIG.API_URL)
+    ? window.APP_CONFIG.API_URL
+    : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:5000/api'
+        : `${window.location.origin}/api`;
 
 const api = {
     // Get auth token from storage
@@ -65,8 +69,8 @@ const api = {
 
     // Auth endpoints
     auth: {
-        login(username, password) {
-            return api.post('/auth/login', { username, password });
+        login(email, password) {
+            return api.post('/auth/login', { email, password });
         },
         register(data) {
             return api.post('/auth/register', data);

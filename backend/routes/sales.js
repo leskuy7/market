@@ -1,31 +1,31 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const StockMovement = require('../models/StockMovement');
 const { protect } = require('../middleware/auth');
+const { validate, saleSchema } = require('../middleware/validators');
 
-// @desc    Satış yap
+// @desc    Satış yap (MongoDB Transaction ile ACID)
 // @route   POST /api/sales
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, validate(saleSchema), async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const { items, discount = 0, paymentMethod = 'cash', note = '' } = req.body;
-
-        if (!items || items.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Sepet boş olamaz'
-            });
-        }
 
         let saleItems = [];
         let subtotal = 0;
 
         // Her ürün için stok kontrolü ve bilgi toplama
         for (const item of items) {
-            const product = await Product.findById(item.productId);
+            const product = await Product.findById(item.productId).session(session);
 
             if (!product) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(404).json({
                     success: false,
                     message: `Ürün bulunamadı: ${item.productId}`
@@ -33,6 +33,8 @@ router.post('/', protect, async (req, res) => {
             }
 
             if (product.stock < item.quantity) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(400).json({
                     success: false,
                     message: `Yetersiz stok: ${product.name} (Mevcut: ${product.stock})`
@@ -55,8 +57,8 @@ router.post('/', protect, async (req, res) => {
 
         const total = subtotal - discount;
 
-        // Satışı kaydet
-        const sale = await Sale.create({
+        // Satışı kaydet (transaction içinde)
+        const [sale] = await Sale.create([{
             items: saleItems,
             subtotal,
             discount,
@@ -64,16 +66,16 @@ router.post('/', protect, async (req, res) => {
             paymentMethod,
             note,
             user: req.user._id
-        });
+        }], { session });
 
-        // Stokları düş ve hareketleri kaydet
+        // Stokları düş ve hareketleri kaydet (transaction içinde)
         for (const item of saleItems) {
-            const product = await Product.findById(item.product);
+            const product = await Product.findById(item.product).session(session);
             const previousStock = product.stock;
             product.stock -= item.quantity;
-            await product.save();
+            await product.save({ session });
 
-            await StockMovement.create({
+            await StockMovement.create([{
                 product: item.product,
                 type: 'out',
                 quantity: item.quantity,
@@ -82,14 +84,22 @@ router.post('/', protect, async (req, res) => {
                 reason: 'sale',
                 reference: sale.saleNumber,
                 user: req.user._id
-            });
+            }], { session });
         }
+
+        // Her şey başarılı — commit
+        await session.commitTransaction();
+        session.endSession();
 
         res.status(201).json({
             success: true,
             data: sale
         });
     } catch (error) {
+        // Hata — rollback
+        await session.abortTransaction();
+        session.endSession();
+
         res.status(400).json({
             success: false,
             message: error.message

@@ -20,6 +20,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- html5-qrcode Barcode Scanner -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
     <!-- Styles -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/components.css">
@@ -46,8 +49,8 @@
 
             <form id="login-form" class="login-form">
                 <div class="form-group">
-                    <label for="login-username">Kullanıcı Adı / E-posta</label>
-                    <input type="text" id="login-username" required autocomplete="username">
+                    <label for="login-email">E-posta</label>
+                    <input type="email" id="login-email" required autocomplete="email">
                 </div>
 
                 <div class="form-group">
@@ -77,18 +80,8 @@
 
             <form id="register-form" class="login-form">
                 <div class="form-group">
-                    <label for="register-name">Ad Soyad</label>
-                    <input type="text" id="register-name" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="register-username">Kullanıcı Adı</label>
-                    <input type="text" id="register-username" required autocomplete="username">
-                </div>
-
-                <div class="form-group">
                     <label for="register-email">E-posta</label>
-                    <input type="email" id="register-email" required>
+                    <input type="email" id="register-email" required autocomplete="email">
                 </div>
 
                 <div class="form-group">
@@ -211,14 +204,9 @@
                 <h2>Barkod Tara</h2>
                 <button class="modal-close" id="close-scanner">✕</button>
             </div>
-            <div class="scanner-container">
-                <video id="scanner-video" autoplay playsinline></video>
-                <div class="scanner-overlay">
-                    <div class="scanner-frame"></div>
-                </div>
-            </div>
-            <div class="scanner-result hidden">
-                <p id="scanned-barcode"></p>
+            <div id="qr-reader" style="width:100%"></div>
+            <div class="scanner-result" id="scanner-result-area" style="display:none; padding:1rem; text-align:center;">
+                <p style="font-size:1.1rem;">Okunan Barkod: <strong id="scanned-barcode"></strong></p>
             </div>
         </div>
     </div>
@@ -312,6 +300,7 @@
     <!-- Scripts -->
     <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/db.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/barcode.js"></script>
     <script src="js/router.js"></script>

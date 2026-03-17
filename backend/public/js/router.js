@@ -57,26 +57,11 @@ const router = {
 };
 
 // Setup navigation listeners
-// Setup navigation listeners
 document.addEventListener('DOMContentLoaded', () => {
-    // Handle hash based navigation
-    const handleHashChange = () => {
-        const hash = window.location.hash.slice(1) || 'dashboard';
-        router.navigate(hash);
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-
-    // Initial load
-    handleHashChange();
-
     document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
+        item.addEventListener('click', () => {
             const page = item.dataset.page;
-            if (page) {
-                window.location.hash = page;
-            }
+            if (page) router.navigate(page);
         });
     });
 });

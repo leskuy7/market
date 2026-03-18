@@ -52,15 +52,23 @@
                 <div class="form-group">
                     <label for="login-email">E-posta</label>
                     <input type="email" id="login-email" required autocomplete="email">
-                    <small class="field-hint">Geçerli bir e-posta adresi girin.</small>
                 </div>
 
                 <div class="form-group">
                     <label for="login-password">Şifre</label>
-                    <div class="input-with-btn">
+                    <div class="password-input-wrap">
                         <input type="password" id="login-password" required autocomplete="current-password">
-                        <button type="button" class="btn btn-ghost password-toggle" data-target="login-password" aria-label="Şifreyi göster">
-                            Göster
+                        <button type="button" class="password-toggle" data-target="login-password" aria-label="Şifreyi göster">
+                            <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12 18.5 19.5 12 19.5 1.5 12 1.5 12Z" />
+                                <circle cx="12" cy="12" r="3.5" />
+                            </svg>
+                            <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M3 3l18 18" />
+                                <path d="M10.6 10.6a2 2 0 1 0 2.8 2.8" />
+                                <path d="M9.9 5.1A11.2 11.2 0 0 1 12 4.5c6.5 0 10.5 7.5 10.5 7.5a16.9 16.9 0 0 1-4 4.8" />
+                                <path d="M6.2 6.2A16.8 16.8 0 0 0 1.5 12s4 7.5 10.5 7.5a11 11 0 0 0 5.6-1.5" />
+                            </svg>
                         </button>
                     </div>
                 </div>
@@ -89,26 +97,42 @@
                 <div class="form-group">
                     <label for="register-email">E-posta</label>
                     <input type="email" id="register-email" required autocomplete="email">
-                    <small class="field-hint">Hesabınız için kullanılacak e-posta adresi.</small>
                 </div>
 
                 <div class="form-group">
                     <label for="register-password">Şifre</label>
-                    <div class="input-with-btn">
+                    <div class="password-input-wrap">
                         <input type="password" id="register-password" required minlength="8" autocomplete="new-password">
-                        <button type="button" class="btn btn-ghost password-toggle" data-target="register-password" aria-label="Şifreyi göster">
-                            Göster
+                        <button type="button" class="password-toggle" data-target="register-password" aria-label="Şifreyi göster">
+                            <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12 18.5 19.5 12 19.5 1.5 12 1.5 12Z" />
+                                <circle cx="12" cy="12" r="3.5" />
+                            </svg>
+                            <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M3 3l18 18" />
+                                <path d="M10.6 10.6a2 2 0 1 0 2.8 2.8" />
+                                <path d="M9.9 5.1A11.2 11.2 0 0 1 12 4.5c6.5 0 10.5 7.5 10.5 7.5a16.9 16.9 0 0 1-4 4.8" />
+                                <path d="M6.2 6.2A16.8 16.8 0 0 0 1.5 12s4 7.5 10.5 7.5a11 11 0 0 0 5.6-1.5" />
+                            </svg>
                         </button>
                     </div>
-                    <small class="field-hint">En az 8 karakter, 1 harf ve 1 rakam içermeli.</small>
                 </div>
 
                 <div class="form-group">
                     <label for="register-password-confirm">Şifre Tekrar</label>
-                    <div class="input-with-btn">
+                    <div class="password-input-wrap">
                         <input type="password" id="register-password-confirm" required minlength="8" autocomplete="new-password">
-                        <button type="button" class="btn btn-ghost password-toggle" data-target="register-password-confirm" aria-label="Şifreyi göster">
-                            Göster
+                        <button type="button" class="password-toggle" data-target="register-password-confirm" aria-label="Şifreyi göster">
+                            <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12 18.5 19.5 12 19.5 1.5 12 1.5 12Z" />
+                                <circle cx="12" cy="12" r="3.5" />
+                            </svg>
+                            <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M3 3l18 18" />
+                                <path d="M10.6 10.6a2 2 0 1 0 2.8 2.8" />
+                                <path d="M9.9 5.1A11.2 11.2 0 0 1 12 4.5c6.5 0 10.5 7.5 10.5 7.5a16.9 16.9 0 0 1-4 4.8" />
+                                <path d="M6.2 6.2A16.8 16.8 0 0 0 1.5 12s4 7.5 10.5 7.5a11 11 0 0 0 5.6-1.5" />
+                            </svg>
                         </button>
                     </div>
                 </div>

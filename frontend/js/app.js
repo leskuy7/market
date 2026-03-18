@@ -6,6 +6,18 @@ function normalizeEmail(value) {
     return value.trim().toLowerCase();
 }
 
+function getEmailValidationMessage(email) {
+    if (!email) {
+        return 'E-posta gereklidir';
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+        return 'Geçerli bir e-posta adresi girin';
+    }
+
+    return null;
+}
+
 function getPasswordValidationMessage(password, requireStrongPassword = false) {
     if (!password) {
         return 'Şifre gereklidir';
@@ -113,8 +125,9 @@ const app = {
             const email = normalizeEmail(document.getElementById('login-email').value);
             const password = document.getElementById('login-password').value;
 
-            if (!EMAIL_REGEX.test(email)) {
-                showToast('Geçerli bir e-posta adresi girin', 'warning');
+            const emailMessage = getEmailValidationMessage(email);
+            if (emailMessage) {
+                showToast(emailMessage, 'warning');
                 document.getElementById('login-email').focus();
                 return;
             }
@@ -152,8 +165,9 @@ const app = {
             const password = document.getElementById('register-password').value;
             const confirmPassword = document.getElementById('register-password-confirm').value;
 
-            if (!EMAIL_REGEX.test(email)) {
-                showToast('Geçerli bir e-posta adresi girin', 'warning');
+            const emailMessage = getEmailValidationMessage(email);
+            if (emailMessage) {
+                showToast(emailMessage, 'warning');
                 document.getElementById('register-email').focus();
                 return;
             }
@@ -211,7 +225,7 @@ const app = {
             button.addEventListener('click', () => {
                 const isPassword = input.type === 'password';
                 input.type = isPassword ? 'text' : 'password';
-                button.textContent = isPassword ? 'Gizle' : 'Göster';
+                button.classList.toggle('is-visible', isPassword);
                 button.setAttribute('aria-label', isPassword ? 'Şifreyi gizle' : 'Şifreyi göster');
             });
         });

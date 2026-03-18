@@ -162,17 +162,60 @@
     flex: 1;
 }
 
-.password-toggle {
-    min-width: 84px;
-    border: 1px solid var(--border-color);
-    border-radius: 1rem;
-    color: var(--text-primary);
+.password-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
 }
 
-.field-hint {
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    margin-left: 0.25rem;
+.password-input-wrap input {
+    width: 100%;
+    padding-right: 3.75rem;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2.5rem;
+    height: 2.5rem;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.75;
+    transition: var(--transition);
+}
+
+.password-toggle:hover {
+    opacity: 1;
+    color: var(--primary-light);
+}
+
+.password-toggle svg {
+    width: 1.3rem;
+    height: 1.3rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.password-toggle .icon-eye-off {
+    display: none;
+}
+
+.password-toggle.is-visible .icon-eye {
+    display: none;
+}
+
+.password-toggle.is-visible .icon-eye-off {
+    display: block;
 }
 
 /* ===============================

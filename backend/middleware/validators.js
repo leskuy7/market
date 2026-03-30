@@ -35,7 +35,7 @@ const categorySchema = z.object({
 
 const stockMovementSchema = z.object({
     productId: z.string().min(1, 'Ürün ID gereklidir'),
-    type: z.enum(['in', 'out'], { message: 'Geçersiz hareket tipi' }),
+    type: z.enum(['in', 'out', 'adjustment'], { message: 'Geçersiz hareket tipi' }),
     quantity: z.number().int().positive('Miktar 0\'dan büyük olmalıdır'),
     reason: z.string().min(1, 'Sebep gereklidir'),
     note: z.string().max(500).optional()

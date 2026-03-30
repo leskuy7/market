@@ -185,4 +185,106 @@ router.get('/me', protect, async (req, res) => {
     });
 });
 
+// @desc    Profil güncelle
+// @route   PUT /api/auth/profile
+router.put('/profile', protect, async (req, res) => {
+    try {
+        const { name, email } = req.body;
+        const updateData = {};
+
+        if (name !== undefined) updateData.name = String(name).trim();
+
+        if (email !== undefined) {
+            const normalized = normalizeEmail(email);
+            if (!EMAIL_REGEX.test(normalized)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Geçerli bir e-posta adresi giriniz'
+                });
+            }
+            // E-posta değişiyorsa başka birinde var mı kontrol et
+            if (normalized !== req.user.email) {
+                const existing = await User.findOne({ email: normalized });
+                if (existing) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Bu e-posta adresi zaten kullanılıyor'
+                    });
+                }
+                updateData.email = normalized;
+            }
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            updateData,
+            { new: true, runValidators: true }
+        );
+
+        res.json({
+            success: true,
+            user: {
+                id: user._id,
+                email: user.email,
+                name: user.name,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// @desc    Şifre değiştir
+// @route   PUT /api/auth/password
+router.put('/password', protect, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mevcut şifre ve yeni şifre gereklidir'
+            });
+        }
+
+        const validationMsg = validateRegisterInput(req.user.email, newPassword);
+        if (validationMsg && validationMsg !== 'E-posta ve şifre gereklidir') {
+            return res.status(400).json({
+                success: false,
+                message: validationMsg
+            });
+        }
+
+        const user = await User.findById(req.user._id).select('+password');
+        const isMatch = await user.matchPassword(currentPassword);
+
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                message: 'Mevcut şifre hatalı'
+            });
+        }
+
+        user.password = newPassword;
+        await user.save();
+
+        const token = user.getSignedJwtToken();
+
+        res.json({
+            success: true,
+            message: 'Şifre başarıyla değiştirildi',
+            token
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
 module.exports = router;

@@ -219,4 +219,146 @@ router.get('/summary/today', async (req, res) => {
     }
 });
 
+// @desc    Satış iptal et
+// @route   PUT /api/sales/:id/cancel
+router.put('/:id/cancel', protect, async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const sale = await Sale.findById(req.params.id).session(session);
+
+        if (!sale) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({
+                success: false,
+                message: 'Satış bulunamadı'
+            });
+        }
+
+        if (sale.status !== 'completed') {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({
+                success: false,
+                message: `Bu satış zaten ${sale.status === 'cancelled' ? 'iptal edilmiş' : 'iade edilmiş'}`
+            });
+        }
+
+        // Stokları geri ekle
+        for (const item of sale.items) {
+            const product = await Product.findById(item.product).session(session);
+            if (product) {
+                const previousStock = product.stock;
+                product.stock += item.quantity;
+                await product.save({ session });
+
+                await StockMovement.create([{
+                    product: item.product,
+                    type: 'in',
+                    quantity: item.quantity,
+                    previousStock,
+                    newStock: product.stock,
+                    reason: 'return',
+                    reference: sale.saleNumber,
+                    note: 'Satış iptali',
+                    user: req.user._id
+                }], { session });
+            }
+        }
+
+        sale.status = 'cancelled';
+        sale.note = (sale.note ? sale.note + ' | ' : '') + `İptal: ${req.body.reason || 'Sebep belirtilmedi'}`;
+        await sale.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.json({
+            success: true,
+            message: 'Satış iptal edildi',
+            data: sale
+        });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// @desc    Satış iade et
+// @route   PUT /api/sales/:id/refund
+router.put('/:id/refund', protect, async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const sale = await Sale.findById(req.params.id).session(session);
+
+        if (!sale) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({
+                success: false,
+                message: 'Satış bulunamadı'
+            });
+        }
+
+        if (sale.status !== 'completed') {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({
+                success: false,
+                message: `Bu satış zaten ${sale.status === 'cancelled' ? 'iptal edilmiş' : 'iade edilmiş'}`
+            });
+        }
+
+        // Stokları geri ekle
+        for (const item of sale.items) {
+            const product = await Product.findById(item.product).session(session);
+            if (product) {
+                const previousStock = product.stock;
+                product.stock += item.quantity;
+                await product.save({ session });
+
+                await StockMovement.create([{
+                    product: item.product,
+                    type: 'in',
+                    quantity: item.quantity,
+                    previousStock,
+                    newStock: product.stock,
+                    reason: 'return',
+                    reference: sale.saleNumber,
+                    note: 'Satış iadesi',
+                    user: req.user._id
+                }], { session });
+            }
+        }
+
+        sale.status = 'refunded';
+        sale.note = (sale.note ? sale.note + ' | ' : '') + `İade: ${req.body.reason || 'Sebep belirtilmedi'}`;
+        await sale.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.json({
+            success: true,
+            message: 'Satış iade edildi',
+            data: sale
+        });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
 module.exports = router;

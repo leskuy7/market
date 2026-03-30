@@ -33,6 +33,9 @@ router.post('/movement', protect, validate(stockMovementSchema), async (req, res
                 });
             }
             newStock = previousStock - quantity;
+        } else if (type === 'adjustment') {
+            // Sayım düzeltmesi: quantity yeni stok miktarı olarak ayarlanır
+            newStock = quantity;
         } else {
             return res.status(400).json({
                 success: false,

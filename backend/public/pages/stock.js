@@ -22,15 +22,20 @@ async function loadStockMovements() {
     try {
         const res = await api.stock.getMovements({ limit: 20 });
         if (res.success && res.data.length > 0) {
+            const typeIcons = { 'in': '📥', 'out': '📤', 'adjustment': '🔄' };
+            const typeClasses = { 'in': 'badge-success', 'out': 'badge-danger', 'adjustment': 'badge-warning' };
+            const typeLabels = { 'in': '+', 'out': '-', 'adjustment': '=' };
+            const reasonLabels = { purchase: 'Satın Alma', sale: 'Satış', return: 'İade', damage: 'Hasar', adjustment: 'Düzeltme', other: 'Diğer' };
+
             container.innerHTML = res.data.map(m => `
                 <div class="list-item">
-                    <div class="list-item-icon">${m.type === 'in' ? '📥' : '📤'}</div>
+                    <div class="list-item-icon">${typeIcons[m.type] || '📦'}</div>
                     <div class="list-item-content">
                         <div class="list-item-title">${m.product?.name || 'Ürün'}</div>
-                        <div class="list-item-subtitle">${formatDateTime(m.createdAt)}</div>
+                        <div class="list-item-subtitle">${formatDateTime(m.createdAt)} · ${reasonLabels[m.reason] || m.reason || ''} ${m.note ? '· ' + m.note : ''}</div>
                     </div>
-                    <span class="badge ${m.type === 'in' ? 'badge-success' : 'badge-danger'}">
-                        ${m.type === 'in' ? '+' : '-'}${m.quantity}
+                    <span class="badge ${typeClasses[m.type] || 'badge-info'}">
+                        ${typeLabels[m.type] || ''}${m.quantity}
                     </span>
                 </div>
             `).join('');
@@ -67,6 +72,7 @@ function openStockModal() {
                             <select id="stock-type">
                                 <option value="in">Giriş</option>
                                 <option value="out">Çıkış</option>
+                                <option value="adjustment">Sayım Düzeltme</option>
                             </select>
                         </div>
                         <div class="form-group">

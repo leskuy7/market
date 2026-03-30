@@ -3,8 +3,18 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const helmet = require('helmet');
+const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
+
+// Ortam değişkeni doğrulama
+const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+if (missingVars.length > 0) {
+    console.error(`HATA: Eksik ortam değişkenleri: ${missingVars.join(', ')}`);
+    console.error('.env dosyasını kontrol edin.');
+    process.exit(1);
+}
 
 // Route dosyaları
 const authRoutes = require('./routes/auth');
@@ -13,6 +23,7 @@ const productRoutes = require('./routes/products');
 const stockRoutes = require('./routes/stock');
 const saleRoutes = require('./routes/sales');
 const reportRoutes = require('./routes/reports');
+const userRoutes = require('./routes/users');
 
 // Veritabanı bağlantısı
 connectDB();
@@ -51,9 +62,20 @@ const authLimiter = rateLimit({
 });
 
 // Middleware
-app.use(cors());
+const allowedOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+    : undefined;
+app.use(cors(allowedOrigins ? {
+    origin: allowedOrigins,
+    credentials: true
+} : undefined));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Request loglama
+if (process.env.NODE_ENV !== 'test') {
+    app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+}
 
 // Statik dosyaları sun (Frontend - EN BAŞTA OLMALI)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -71,6 +93,19 @@ app.use('/api/products', protect, productRoutes);
 app.use('/api/stock', protect, stockRoutes);
 app.use('/api/sales', protect, saleRoutes);
 app.use('/api/reports', protect, reportRoutes);
+app.use('/api/users', protect, authorize('admin'), userRoutes);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    const mongoose = require('mongoose');
+    res.json({
+        success: true,
+        status: 'ok',
+        uptime: process.uptime(),
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        timestamp: new Date().toISOString()
+    });
+});
 
 // Ana sayfa (API Bilgisi)
 app.get('/api', (req, res) => {

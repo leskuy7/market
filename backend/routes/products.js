@@ -2,14 +2,21 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 const StockMovement = require('../models/StockMovement');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 const { validate, productSchema, productUpdateSchema } = require('../middleware/validators');
+
+// Regex özel karakterlerini escape et (ReDoS koruması)
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // @desc    Tüm ürünleri getir
 // @route   GET /api/products
 router.get('/', async (req, res) => {
     try {
-        const { category, search, lowStock, page = 1, limit = 50 } = req.query;
+        const { category, search, lowStock, page: rawPage = 1, limit: rawLimit = 50 } = req.query;
+        const page = Math.max(1, parseInt(rawPage) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(rawLimit) || 50));
 
         let query = { isActive: true };
 
@@ -18,9 +25,10 @@ router.get('/', async (req, res) => {
         }
 
         if (search) {
+            const escaped = escapeRegex(search);
             query.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { barcode: { $regex: search, $options: 'i' } }
+                { name: { $regex: escaped, $options: 'i' } },
+                { barcode: { $regex: escaped, $options: 'i' } }
             ];
         }
 
@@ -32,7 +40,7 @@ router.get('/', async (req, res) => {
             .populate('category', 'name color icon')
             .sort('-createdAt')
             .skip((page - 1) * limit)
-            .limit(parseInt(limit));
+            .limit(limit);
 
         const total = await Product.countDocuments(query);
 
@@ -171,7 +179,7 @@ router.put('/:id', protect, validate(productUpdateSchema), async (req, res) => {
 
 // @desc    Ürün sil
 // @route   DELETE /api/products/:id
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', protect, authorize('admin'), async (req, res) => {
     try {
         const product = await Product.findByIdAndUpdate(
             req.params.id,

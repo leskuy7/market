@@ -2,35 +2,29 @@
 let cart = [];
 
 // ─── USB Barcode Scanner Buffer System ───
-// Barcode guns type at 10-20ms intervals and send Enter at the end.
-// Human typing is much slower (>50ms between keys).
 const scannerBuffer = {
     buffer: '',
     lastKeyTime: 0,
-    MAX_KEY_INTERVAL: 50, // ms — gap threshold between scanner vs human typing
+    MAX_KEY_INTERVAL: 50,
 
     handleKeyDown(e) {
         const now = Date.now();
         const target = e.target;
 
-        // Don't intercept if user is typing in a text input (except barcode-input)
         if (target.tagName === 'INPUT' && target.id !== 'barcode-input') return;
         if (target.tagName === 'TEXTAREA') return;
         if (target.tagName === 'SELECT') return;
 
-        // If too much time passed, reset buffer (human typing)
         if (now - this.lastKeyTime > this.MAX_KEY_INTERVAL && this.buffer.length > 0) {
             this.buffer = '';
         }
         this.lastKeyTime = now;
 
         if (e.key === 'Enter') {
-            if (this.buffer.length >= 4) { // Minimum barcode length
+            if (this.buffer.length >= 4) {
                 e.preventDefault();
                 const barcode = this.buffer;
                 this.buffer = '';
-
-                // If on sales page, add to cart
                 const barcodeInput = document.getElementById('barcode-input');
                 if (barcodeInput) {
                     barcodeInput.value = '';
@@ -39,13 +33,11 @@ const scannerBuffer = {
             }
             this.buffer = '';
         } else if (e.key.length === 1) {
-            // Single character key (not Shift, Ctrl, etc.)
             this.buffer += e.key;
         }
     }
 };
 
-// Global listener for barcode scanner
 document.addEventListener('keydown', (e) => scannerBuffer.handleKeyDown(e));
 
 router.register('sales', async (container) => {
@@ -53,6 +45,9 @@ router.register('sales', async (container) => {
     container.innerHTML = `
         <div class="page-header">
             <h2>Satış</h2>
+            <div style="display:flex;gap:0.5rem">
+                <button class="btn btn-outline btn-sm" id="show-history-btn">📋 Geçmiş</button>
+            </div>
         </div>
         <div class="cart-container">
             <div>
@@ -81,7 +76,7 @@ router.register('sales', async (container) => {
                     </div>
                     <div class="cart-total-row">
                         <span>İndirim</span>
-                        <input type="number" id="cart-discount" value="0" min="0" style="width:80px;text-align:right">
+                        <input type="number" id="cart-discount" value="0" min="0" step="0.01" style="width:80px;text-align:right">
                     </div>
                     <div class="cart-total-row total">
                         <span>Toplam</span>
@@ -107,7 +102,6 @@ router.register('sales', async (container) => {
 
     const barcodeInput = document.getElementById('barcode-input');
 
-    // Manual typing: user types barcode and presses Enter
     barcodeInput.addEventListener('keypress', async (e) => {
         if (e.key === 'Enter') {
             const barcode = barcodeInput.value.trim();
@@ -121,19 +115,24 @@ router.register('sales', async (container) => {
 
     document.getElementById('cart-discount').oninput = updateCartTotals;
     document.getElementById('complete-sale-btn').onclick = completeSale;
-    document.getElementById('clear-cart-btn').onclick = () => { cart = []; renderCart(); };
+    document.getElementById('clear-cart-btn').onclick = async () => {
+        if (cart.length === 0) return;
+        if (await confirm('Sepeti temizlemek istediğinize emin misiniz?')) {
+            cart = [];
+            renderCart();
+        }
+    };
+    document.getElementById('show-history-btn').onclick = showSalesHistory;
 });
 
 async function addToCart(barcode) {
     try {
         let product = null;
 
-        // Try IndexedDB first (0 latency, works offline)
         if (typeof offlineDB !== 'undefined') {
             product = await offlineDB.getProductByBarcode(barcode);
         }
 
-        // Fallback to server if not found locally
         if (!product) {
             const res = await api.products.getByBarcode(barcode);
             if (res.success) {
@@ -219,9 +218,20 @@ function removeFromCart(index) {
 
 function updateCartTotals() {
     const subtotal = cart.reduce((sum, i) => sum + (i.product.salePrice * i.quantity), 0);
-    const discount = parseFloat(document.getElementById('cart-discount')?.value || 0);
-    const total = Math.max(0, subtotal - discount);
+    const discountInput = document.getElementById('cart-discount');
+    let discount = parseFloat(discountInput?.value || 0);
 
+    // İndirim kontrolü
+    if (discount < 0) {
+        discount = 0;
+        discountInput.value = 0;
+    }
+    if (discount > subtotal) {
+        discount = subtotal;
+        discountInput.value = subtotal;
+    }
+
+    const total = Math.max(0, subtotal - discount);
     document.getElementById('cart-subtotal').textContent = formatCurrency(subtotal);
     document.getElementById('cart-total').textContent = formatCurrency(total);
 }
@@ -243,12 +253,17 @@ async function completeSale() {
         if (res.success) {
             showToast(`Satış tamamlandı! ${res.data.saleNumber}`, 'success');
             if (typeof sfx !== 'undefined') sfx.success();
+
+            // Fiş yazdırma seçeneği
+            if (await confirm('Fiş yazdırılsın mı?')) {
+                printReceipt(res.data);
+            }
+
             cart = [];
             renderCart();
             document.getElementById('cart-discount').value = 0;
         }
     } catch (e) {
-        // Offline fallback: queue sale locally
         if (!navigator.onLine && typeof offlineDB !== 'undefined') {
             const queued = await offlineDB.queueSale(data);
             if (queued) {
@@ -266,4 +281,174 @@ async function completeSale() {
             if (typeof sfx !== 'undefined') sfx.error();
         }
     }
+}
+
+function printReceipt(sale) {
+    const receiptWindow = window.open('', '_blank', 'width=300,height=600');
+    const items = sale.items.map(i =>
+        `<tr><td>${i.name}</td><td style="text-align:center">${i.quantity}</td><td style="text-align:right">${i.total.toFixed(2)}</td></tr>`
+    ).join('');
+
+    receiptWindow.document.write(`
+        <html><head><title>Fiş</title>
+        <style>
+            body { font-family: monospace; font-size: 12px; padding: 10px; max-width: 280px; margin: 0 auto; }
+            h2 { text-align: center; margin: 5px 0; }
+            hr { border: none; border-top: 1px dashed #000; }
+            table { width: 100%; border-collapse: collapse; }
+            td { padding: 2px 0; }
+            .total { font-weight: bold; font-size: 14px; }
+            .center { text-align: center; }
+            @media print { .no-print { display: none; } }
+        </style></head><body>
+        <h2>Market Stok Takip</h2>
+        <p class="center">${new Date(sale.createdAt).toLocaleString('tr-TR')}</p>
+        <p class="center">Fiş No: ${sale.saleNumber}</p>
+        <hr>
+        <table>
+            <tr><th style="text-align:left">Ürün</th><th>Adet</th><th style="text-align:right">Tutar</th></tr>
+            ${items}
+        </table>
+        <hr>
+        <table>
+            <tr><td>Ara Toplam:</td><td style="text-align:right">${sale.subtotal.toFixed(2)} TL</td></tr>
+            ${sale.discount > 0 ? `<tr><td>İndirim:</td><td style="text-align:right">-${sale.discount.toFixed(2)} TL</td></tr>` : ''}
+            <tr class="total"><td>TOPLAM:</td><td style="text-align:right">${sale.total.toFixed(2)} TL</td></tr>
+        </table>
+        <hr>
+        <p class="center">Ödeme: ${sale.paymentMethod === 'cash' ? 'Nakit' : 'Kart'}</p>
+        <p class="center" style="margin-top:10px">Teşekkür ederiz!</p>
+        <button class="no-print" onclick="window.print()" style="width:100%;padding:8px;margin-top:10px;cursor:pointer">Yazdır</button>
+        </body></html>
+    `);
+    receiptWindow.document.close();
+}
+
+async function showSalesHistory() {
+    const modal = createElement('div', {
+        className: 'modal',
+        innerHTML: `
+            <div class="modal-content" style="max-width:700px">
+                <div class="modal-header">
+                    <h2>Satış Geçmişi</h2>
+                    <button class="modal-close" id="close-history-modal">✕</button>
+                </div>
+                <div class="modal-form">
+                    <div class="toolbar" style="margin-bottom:1rem;gap:0.5rem;flex-wrap:wrap">
+                        <input type="text" id="history-search" placeholder="Fiş no ile ara..." style="flex:1;min-width:150px">
+                        <select id="history-status-filter" style="width:auto">
+                            <option value="">Tümü</option>
+                            <option value="completed">Tamamlanan</option>
+                            <option value="cancelled">İptal</option>
+                            <option value="refunded">İade</option>
+                        </select>
+                    </div>
+                    <div id="history-list" style="max-height:400px;overflow-y:auto">
+                        <p class="text-muted">Yükleniyor...</p>
+                    </div>
+                </div>
+            </div>
+        `
+    });
+    document.body.appendChild(modal);
+    modal.querySelector('#close-history-modal').onclick = () => modal.remove();
+
+    async function loadHistory() {
+        const status = document.getElementById('history-status-filter').value;
+        const historyList = document.getElementById('history-list');
+        try {
+            const res = await api.sales.getAll({ status, limit: 50 });
+            if (res.success && res.data.length > 0) {
+                const search = (document.getElementById('history-search').value || '').toLowerCase();
+                const filtered = search
+                    ? res.data.filter(s => s.saleNumber?.toLowerCase().includes(search))
+                    : res.data;
+
+                if (filtered.length === 0) {
+                    historyList.innerHTML = '<p class="text-muted text-center">Sonuç bulunamadı</p>';
+                    return;
+                }
+
+                historyList.innerHTML = filtered.map(s => {
+                    const statusBadge = s.status === 'completed'
+                        ? '<span class="badge badge-success">Tamamlandı</span>'
+                        : s.status === 'cancelled'
+                        ? '<span class="badge badge-danger">İptal</span>'
+                        : '<span class="badge badge-warning">İade</span>';
+
+                    return `
+                        <div class="list-item" style="cursor:pointer" data-sale-id="${s._id}">
+                            <div class="list-item-content">
+                                <div class="list-item-title">${s.saleNumber || 'Fiş'} ${statusBadge}</div>
+                                <div class="list-item-subtitle">${formatDateTime(s.createdAt)} · ${s.items.length} ürün · ${s.paymentMethod === 'cash' ? 'Nakit' : 'Kart'}</div>
+                            </div>
+                            <div style="text-align:right">
+                                <div class="text-success" style="font-weight:600">${formatCurrency(s.total)}</div>
+                                ${s.status === 'completed' ? `
+                                    <div style="margin-top:4px;display:flex;gap:4px">
+                                        <button class="btn btn-ghost btn-sm cancel-sale-btn" data-id="${s._id}" title="İptal Et">❌</button>
+                                        <button class="btn btn-ghost btn-sm refund-sale-btn" data-id="${s._id}" title="İade Et">↩️</button>
+                                        <button class="btn btn-ghost btn-sm print-sale-btn" data-id="${s._id}" title="Fiş Yazdır">🖨️</button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // İptal butonları
+                historyList.querySelectorAll('.cancel-sale-btn').forEach(btn => {
+                    btn.onclick = async (e) => {
+                        e.stopPropagation();
+                        if (await confirm('Bu satışı iptal etmek istediğinize emin misiniz?')) {
+                            try {
+                                const res = await api.sales.cancel(btn.dataset.id, 'Manuel iptal');
+                                if (res.success) {
+                                    showToast('Satış iptal edildi', 'success');
+                                    loadHistory();
+                                }
+                            } catch (err) { showToast(err.message, 'error'); }
+                        }
+                    };
+                });
+
+                // İade butonları
+                historyList.querySelectorAll('.refund-sale-btn').forEach(btn => {
+                    btn.onclick = async (e) => {
+                        e.stopPropagation();
+                        if (await confirm('Bu satışı iade etmek istediğinize emin misiniz?')) {
+                            try {
+                                const res = await api.sales.refund(btn.dataset.id, 'Manuel iade');
+                                if (res.success) {
+                                    showToast('Satış iade edildi', 'success');
+                                    loadHistory();
+                                }
+                            } catch (err) { showToast(err.message, 'error'); }
+                        }
+                    };
+                });
+
+                // Fiş yazdırma butonları
+                historyList.querySelectorAll('.print-sale-btn').forEach(btn => {
+                    btn.onclick = async (e) => {
+                        e.stopPropagation();
+                        try {
+                            const res = await api.sales.getById(btn.dataset.id);
+                            if (res.success) {
+                                printReceipt(res.data);
+                            }
+                        } catch (err) { showToast(err.message, 'error'); }
+                    };
+                });
+            } else {
+                historyList.innerHTML = '<p class="text-muted text-center">Satış bulunamadı</p>';
+            }
+        } catch (e) {
+            historyList.innerHTML = '<p class="text-danger">' + e.message + '</p>';
+        }
+    }
+
+    document.getElementById('history-status-filter').onchange = loadHistory;
+    document.getElementById('history-search').oninput = debounce(loadHistory, 300);
+    await loadHistory();
 }

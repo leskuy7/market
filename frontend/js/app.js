@@ -80,8 +80,69 @@ const app = {
             document.getElementById('user-role').textContent = user.role === 'admin' ? 'Yönetici' : 'Personel';
         }
 
+        // Setup notifications
+        this.setupNotifications();
+
         // Navigate to dashboard
         router.navigate('dashboard');
+    },
+
+    async setupNotifications() {
+        const btn = document.getElementById('notifications-btn');
+        if (!btn) return;
+
+        const updateBadge = async () => {
+            try {
+                const res = await api.products.getLowStock();
+                if (res.success && res.data.length > 0) {
+                    btn.setAttribute('data-count', res.data.length);
+                    btn.style.position = 'relative';
+                    btn.classList.add('has-notifications');
+                } else {
+                    btn.classList.remove('has-notifications');
+                    btn.removeAttribute('data-count');
+                }
+            } catch (e) { /* silent */ }
+        };
+
+        btn.onclick = async () => {
+            try {
+                const res = await api.products.getLowStock();
+                if (res.success && res.data.length > 0) {
+                    const modal = createElement('div', {
+                        className: 'modal',
+                        innerHTML: `
+                            <div class="modal-content" style="max-width:500px">
+                                <div class="modal-header">
+                                    <h2>Bildirimler</h2>
+                                    <button class="modal-close" id="close-notif-modal">✕</button>
+                                </div>
+                                <div class="modal-form" style="max-height:400px;overflow-y:auto">
+                                    ${res.data.map(p => `
+                                        <div class="list-item">
+                                            <div class="list-item-icon">⚠️</div>
+                                            <div class="list-item-content">
+                                                <div class="list-item-title">${p.name}</div>
+                                                <div class="list-item-subtitle">Stok: <strong class="text-danger">${p.stock}</strong> / Min: ${p.minStock}</div>
+                                            </div>
+                                            <span class="badge badge-danger">Düşük Stok</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `
+                    });
+                    document.body.appendChild(modal);
+                    modal.querySelector('#close-notif-modal').onclick = () => modal.remove();
+                } else {
+                    showToast('Bildirim yok', 'info');
+                }
+            } catch (e) { showToast('Bildirimler yüklenemedi', 'error'); }
+        };
+
+        await updateBadge();
+        // Her 5 dakikada güncelle
+        setInterval(updateBadge, 5 * 60 * 1000);
     },
 
     setupEventListeners() {

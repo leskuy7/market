@@ -242,6 +242,24 @@ body {
     background: var(--primary);
 }
 
+.icon-btn.has-notifications::after {
+    content: attr(data-count);
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--danger, #ef4444);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
 /* ===============================
    Sidebar
    =============================== */

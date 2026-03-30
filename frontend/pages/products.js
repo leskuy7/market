@@ -152,6 +152,21 @@ document.addEventListener('DOMContentLoaded', () => {
             description: document.getElementById('product-description').value
         };
 
+        // Form doğrulama
+        if (data.purchasePrice < 0 || data.salePrice < 0) {
+            showToast('Fiyatlar negatif olamaz', 'warning');
+            return;
+        }
+        if (data.salePrice < data.purchasePrice) {
+            if (!await confirm('Satış fiyatı alış fiyatından düşük. Devam etmek istiyor musunuz?')) {
+                return;
+            }
+        }
+        if (data.stock < 0 || data.minStock < 0) {
+            showToast('Stok değerleri negatif olamaz', 'warning');
+            return;
+        }
+
         try {
             const res = id ? await api.products.update(id, data) : await api.products.create(data);
             if (res.success) {

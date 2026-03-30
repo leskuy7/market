@@ -77,6 +77,12 @@ const api = {
         },
         me() {
             return api.get('/auth/me');
+        },
+        updateProfile(data) {
+            return api.put('/auth/profile', data);
+        },
+        changePassword(data) {
+            return api.put('/auth/password', data);
         }
     },
 
@@ -151,6 +157,25 @@ const api = {
         },
         getTodaySummary() {
             return api.get('/sales/summary/today');
+        },
+        cancel(id, reason) {
+            return api.put(`/sales/${id}/cancel`, { reason });
+        },
+        refund(id, reason) {
+            return api.put(`/sales/${id}/refund`, { reason });
+        }
+    },
+
+    // Users endpoints (admin)
+    users: {
+        getAll() {
+            return api.get('/users');
+        },
+        update(id, data) {
+            return api.put(`/users/${id}`, data);
+        },
+        delete(id) {
+            return api.delete(`/users/${id}`);
         }
     },
 

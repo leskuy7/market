@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const Category = require('../models/Category');
+const Product = require('../models/Product');
 const { protect, authorize } = require('../middleware/auth');
+const { validate, categorySchema } = require('../middleware/validators');
 
 // @desc    Tüm kategorileri getir
 // @route   GET /api/categories
@@ -23,7 +25,7 @@ router.get('/', async (req, res) => {
 
 // @desc    Kategori ekle
 // @route   POST /api/categories
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, validate(categorySchema), async (req, res) => {
     try {
         const category = await Category.create(req.body);
         res.status(201).json({
@@ -40,7 +42,7 @@ router.post('/', protect, async (req, res) => {
 
 // @desc    Kategori güncelle
 // @route   PUT /api/categories/:id
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', protect, validate(categorySchema.partial()), async (req, res) => {
     try {
         const category = await Category.findByIdAndUpdate(
             req.params.id,
@@ -71,6 +73,19 @@ router.put('/:id', protect, async (req, res) => {
 // @route   DELETE /api/categories/:id
 router.delete('/:id', protect, authorize('admin'), async (req, res) => {
     try {
+        // Bu kategoriye ait aktif ürün var mı kontrol et
+        const productCount = await Product.countDocuments({
+            category: req.params.id,
+            isActive: true
+        });
+
+        if (productCount > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Bu kategoride ${productCount} aktif ürün bulunuyor. Önce ürünleri başka bir kategoriye taşıyın.`
+            });
+        }
+
         const category = await Category.findByIdAndUpdate(
             req.params.id,
             { isActive: false },
